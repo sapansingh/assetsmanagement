@@ -1,4 +1,3 @@
-// app/login/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,34 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
-  Lock,
-  User,
-  Eye,
-  EyeOff,
-  Mail,
-  AlertTriangle,
-  CheckCircle,
-  ArrowRight,
-  Sparkles,
-  LogIn,
-  Key,
-  Shield,
-  Briefcase,
-  Users,
-  Eye as EyeIcon,
-  Zap,
-  Database,
-  ShieldCheck,
-  BarChart,
-  Globe,
-  Server,
-  Network
+  Lock, User, Eye, EyeOff, LogIn, Zap, AlertTriangle,
+  Key, Mail, CheckCircle, ArrowRight, Sparkles,
+  Shield, Briefcase, Users, Eye as EyeIcon,
+  Database, Server, Cpu, Activity, Network,
+  ShieldCheck, BarChart, Globe
 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,16 +22,10 @@ export default function LoginPage() {
     password: '',
     rememberMe: false
   });
-  const [particles, setParticles] = useState([]);
+  const [mounted, setMounted] = useState(false);
 
-  // Generate background particles
   useEffect(() => {
-    const newParticles = Array.from({ length: 30 }).map(() => ({
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-    }));
-    setParticles(newParticles);
+    setMounted(true);
   }, []);
 
   const redirect = searchParams.get('redirect');
@@ -77,37 +52,28 @@ export default function LoginPage() {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: formData.username,
           password: formData.password,
           rememberMe: formData.rememberMe
-        }),
+        })
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        // Store user data and token in localStorage
-        localStorage.setItem('assetflow_user', JSON.stringify(data.user));
-        localStorage.setItem('assetflow_token', data.token);
-        localStorage.setItem('assetflow_role', data.user.role);
-        localStorage.setItem('assetflow_username', data.user.username);
-
-        toast.success(data.message || 'Login successful!');
+      if (response.ok) {
+        toast.success('Login successful!');
         
-        // Delay redirect to show success message
         setTimeout(() => {
           router.push(redirect || '/assets/dashboard');
         }, 500);
       } else {
-        toast.error(data.message || 'Login failed');
+        throw new Error(data.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Network error. Please check your connection.');
+      toast.error(error.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -127,33 +93,22 @@ export default function LoginPage() {
     { icon: Database, title: 'Centralized Data', desc: 'Single source of truth' },
   ];
 
+  if (!mounted) return null;
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-900 via-slate-900 to-gray-950">
-      {/* Animated Background Particles */}
-      {particles.map((particle, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 animate-pulse"
-          style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-            width: `${particle.size}px`,
-            height: `${particle.size}px`,
-            animationDelay: `${i * 0.1}s`,
-          }}
-        />
-      ))}
-
-      {/* Animated Gradient Orbs */}
-      <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
-      <div className="absolute top-0 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
-      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1500"></div>
-
-      {/* Grid Pattern */}
-      <div className="absolute inset-0" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        opacity: 0.4
-      }}></div>
+      {/* Background Effects */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-0 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-1000"></div>
+        <div className="absolute bottom-0 left-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-1500"></div>
+        
+        {/* Grid Pattern */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          opacity: 0.4
+        }}></div>
+      </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-12">
@@ -381,7 +336,9 @@ export default function LoginPage() {
                               password: account.password,
                               rememberMe: false
                             });
-                            toast.success(`${account.role} credentials loaded`);
+                            toast.success(`${account.role} credentials loaded`, {
+                              icon: <account.icon className="w-4 h-4" />
+                            });
                           }}
                           className={`py-3 px-4 ${account.color} text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2`}
                         >
@@ -416,70 +373,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Add animation styles */}
-      <style jsx global>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-        
-        .animate-pulse {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        .animate-in {
-          animation: animate-in 0.5s ease-out;
-        }
-        
-        @keyframes animate-in {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        
-        .slide-in-from-top {
-          animation: slide-in-from-top 0.5s ease-out;
-        }
-        
-        @keyframes slide-in-from-top {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
     </div>
   );
 }
