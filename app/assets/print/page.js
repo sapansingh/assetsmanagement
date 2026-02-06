@@ -1,11 +1,11 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import { useSearchParams } from 'next/navigation';
 import { useRef, useEffect, useState } from 'react';
-import  { Metadata } from 'next';
+import { Metadata } from 'next';
 import { Printer, Download, X, FileText, CheckCircle, AlertCircle, Package, Smartphone, Car, User, Calendar } from 'lucide-react';
 import Link from 'next/link';
-
 
 const PrintableAssetForm = () => {
   const searchParams = useSearchParams();
@@ -34,6 +34,7 @@ const PrintableAssetForm = () => {
     approved_by: searchParams.get('approved_by') || 'Sarah Smith',
     mail_date: searchParams.get('mail_date') || '',
     replace_device_sn_imei: searchParams.get('replace_device_sn_imei') || '',
+    handover: searchParams.get('handover') || ''
   };
 
   // Get current date - safe for SSR
@@ -42,13 +43,15 @@ const PrintableAssetForm = () => {
     month: 'long',
     day: 'numeric'
   });
-function formatDate(date) {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
+
+  function formatDate(date) {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
   // Mark as mounted to handle client-only content
   useEffect(() => {
     setMounted(true);
@@ -169,9 +172,7 @@ function formatDate(date) {
         {/* Main Content - Optimized for A4 */}
         <div className="px-6 py-6">
           {/* Asset Details Section in Table Format */}
-          <div className="mb-6">
-         
-            
+          <div className="mb-4">
             {/* Main Asset Information Table */}
             <div className="border-2 border-gray-300 rounded-lg overflow-hidden mb-4">
               <table className="w-full border-collapse">
@@ -278,25 +279,32 @@ function formatDate(date) {
                     </tr>
                   )}
 
-
-                      {/* Row 8: Mail Date (if exists) */}
+                  {/* Row 8: Mail Date (if exists) */}
                   {assetData.mail_date && (
                     <tr>
                       <td className="py-2 px-4 text-xs font-medium text-gray-500 border-r border-gray-200">Mail Date</td>
                       <td colSpan="3" className="py-2 px-4 text-sm text-gray-700">
-                    <Calendar className="w-3 h-3 inline-block mr-1" />
+                        <Calendar className="w-3 h-3 inline-block mr-1" />
                         Date: {formatDate(assetData.mail_date)}
                       </td>
                     </tr>
                   )}
 
+                  {assetData.handover && (
+                    <tr>
+                      <td className="py-2 px-4 text-xs font-medium text-gray-500 border-r border-gray-200">Handover</td>
+                      <td colSpan="3" className="py-2 px-4 text-sm text-gray-700">
+                        {assetData.handover}
+                      </td>
+                    </tr>
+                  )}
 
-                           {/* Row 8: Mail Date (if exists) */}
+                  {/* Row 9: Replace Device SN/IMEI (if exists) */}
                   {assetData.replace_device_sn_imei && (
                     <tr>
                       <td className="py-2 px-4 text-xs font-medium text-gray-500 border-r border-gray-200">Replace Device SN/IMEI</td>
                       <td colSpan="3" className="py-2 px-4 text-sm text-gray-700">
-                    <Calendar className="w-3 h-3 inline-block mr-1" />
+                        <Calendar className="w-3 h-3 inline-block mr-1" />
                         {assetData.replace_device_sn_imei}
                       </td>
                     </tr>
@@ -343,16 +351,23 @@ function formatDate(date) {
               AUTHORIZED SIGNATURES & APPROVALS
             </h3>
             
-            <div className="grid grid-cols-2 gap-8">
-              {/* Left Side - Prepared By */}
+            {/* Three Signatures in One Row */}
+            <div className="grid grid-cols-3 gap-4">
+              {/* Signature 1 - Issued/Received By */}
               <div className="text-center">
-                <div className="mb-4">
-                  <div className="text-lg font-bold text-gray-900 mb-1"></div>
-                  <div className="text-xs text-gray-600 font-medium">Prepared By</div>
-                  <div className="text-xs text-gray-500 mt-1">Asset Management Department</div>
+                <div className="mb-3">
+                  <div className="text-sm font-bold text-gray-900 mb-1">
+                   
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">
+                    {assetData.status === 'Issued' ? 'Issued To' : 'Received By'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {assetData.status === 'Issued' ? 'Asset Recipient' : 'Asset Returner'}
+                  </div>
                 </div>
                 
-                <div className="relative mt-10">
+                <div className="relative mt-8">
                   <div className="border-t-2 border-gray-800 pt-4">
                     <div className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Signature</div>
                     <div className="text-xs text-gray-500 mt-2 font-medium">
@@ -362,21 +377,19 @@ function formatDate(date) {
                       </div>
                     </div>
                   </div>
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4">
-                   
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
                   </div>
                 </div>
               </div>
 
-              {/* Right Side - Approved By */}
+              {/* Signature 2 - Prepared By */}
               <div className="text-center">
-                <div className="mb-4">
-                  <div className="text-lg font-bold text-gray-900 mb-1"></div>
-                  <div className="text-xs text-gray-600 font-medium">Approved By</div>
-                  <div className="text-xs text-gray-500 mt-1">Authorized Signatory</div>
+                <div className="mb-3">
+                  <div className="text-xs text-gray-600 font-medium">Prepared By</div>
+                  <div className="text-xs text-gray-500 mt-1">Asset Management Department</div>
                 </div>
                 
-                <div className="relative mt-10">
+                <div className="relative mt-8">
                   <div className="border-t-2 border-gray-800 pt-4">
                     <div className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Signature</div>
                     <div className="text-xs text-gray-500 mt-2 font-medium">
@@ -386,8 +399,29 @@ function formatDate(date) {
                       </div>
                     </div>
                   </div>
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4">
-         
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
+                  </div>
+                </div>
+              </div>
+
+              {/* Signature 3 - Approved By */}
+              <div className="text-center">
+                <div className="mb-3">
+                  <div className="text-xs text-gray-600 font-medium">Approved By</div>
+                  <div className="text-xs text-gray-500 mt-1">Authorized Signatory</div>
+                </div>
+                
+                <div className="relative mt-8">
+                  <div className="border-t-2 border-gray-800 pt-4">
+                    <div className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Signature</div>
+                    <div className="text-xs text-gray-500 mt-2 font-medium">
+                      <div className="flex items-center justify-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Date: {currentDate}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
                   </div>
                 </div>
               </div>
@@ -395,7 +429,7 @@ function formatDate(date) {
           </div>
 
           {/* Terms & Conditions */}
-          <div className="mt-4 pt-6 border-t border-gray-300">
+          <div className="mt-2 pt-6 border-t border-gray-300">
             <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">TERMS & CONDITIONS</h3>
             <div className="space-y-1">
               <div className="grid grid-cols-2 gap-3">
@@ -437,7 +471,7 @@ function formatDate(date) {
               <div>
                 <div className="font-semibold text-gray-700 mb-0.5">For Inquiries:</div>
                 <div>Asset Management IT Department</div>
-                <div> Email: RJ_ITIS@EMRI.IN</div>
+                <div>Email: RJ_ITIS@EMRI.IN</div>
               </div>
               <div className="text-center">
                 <div className="font-semibold text-gray-700 mb-0.5">Document Control</div>
@@ -535,6 +569,11 @@ function formatDate(date) {
             padding: 0.2in !important;
           }
           
+          /* Signature section print optimization */
+          .printable-form .grid.grid-cols-3 {
+            gap: 0.2in !important;
+          }
+          
           /* Remove backgrounds for better printing */
           * {
             -webkit-print-color-adjust: exact !important;
@@ -571,6 +610,17 @@ function formatDate(date) {
           
           .printable-form tr:hover {
             background-color: #f9fafb;
+          }
+          
+          /* Signature section screen styles */
+          .printable-form .grid.grid-cols-3 {
+            gap: 1rem;
+          }
+          
+          .printable-form .grid.grid-cols-3 > div {
+            padding: 0.5rem;
+            border: 1px dashed #e5e7eb;
+            border-radius: 0.375rem;
           }
         }
       `}</style>

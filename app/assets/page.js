@@ -177,7 +177,8 @@ export default function AssetsPage() {
     recovery_status: '',
     replace_device_sn_imei:'', 
     prepared_by: 'sapan singh',
-    approved_by: 'sapan singh'
+    approved_by: 'sapan singh',
+    handover: ''
   });
   
   const [images, setImages] = useState([]);
@@ -411,7 +412,8 @@ export default function AssetsPage() {
             recovery_name: assetData.recovery_name || '',
             recovery_status: assetData.recovery_status || '',
             prepared_by: assetData.prepared_by_name || 'sapan singh',
-            approved_by: assetData.approved_by_name || 'sapan singh'
+            approved_by: assetData.approved_by_name || 'sapan singh',
+            handover: assetData.handover || ''
           });
           
           // Store existing images
@@ -466,7 +468,8 @@ export default function AssetsPage() {
         recovery_status: '',
         replace_device_sn_imei:'',
         prepared_by: 'sapan singh',
-        approved_by: 'sapan singh'
+        approved_by: 'sapan singh',
+        handover: ''
       });
       setExistingImages([]);
       setImagePreviews([]);
@@ -489,7 +492,7 @@ export default function AssetsPage() {
       type_name: '',
       brand_name: '',
       model_name: '',
-      status: 'In Stock',
+      status: 'Issued',
       vehicleno: '',
       imei_no: '',
       ip_address: '',
@@ -505,7 +508,8 @@ export default function AssetsPage() {
       mail_date:'',
       replace_device_sn_imei:'',
       prepared_by: 'sapan singh',
-      approved_by: 'sapan singh'
+      approved_by: 'sapan singh',
+      handover: ''
     });
   };
 
@@ -714,7 +718,8 @@ const { user } = useAuth();
       prepared_by: asset.prepared_by_name || 'sapan singh',
       approved_by: asset.approved_by_name || 'sapan singh',
       received_from: asset.received_from || '',
-      received_date: asset.received_date || ''
+      received_date: asset.received_date || '',
+      handover: asset.handover || ''
     }).toString();
 
 
@@ -1600,7 +1605,7 @@ const { user } = useAuth();
                       >
                         <option value="Issued">Issued</option>
                         <option value="Received">Received</option>
-                        <option value="In Stock">In Stock</option>
+                        {/* <option value="In Stock">In Stock</option> */}
                       </select>
                     </div>
                   </div>
@@ -1675,6 +1680,27 @@ const { user } = useAuth();
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Device Status */}
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                        Handover
+                      </label>
+                      <select
+                        name="handover"
+                        value={formData.handover}
+                        onChange={handleInputChange}
+                        disabled={submitting}
+                        className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200 bg-white dark:bg-slate-700 text-slate-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">Select Status</option>
+                        <option value="EMT">EMT</option>
+                        <option value="Pilot">Pilot</option>
+                        <option value="EME">EME</option>
+                        <option value="PM">PM</option>
+                        <option value="RM">RM</option>
+                        <option value="Mint">Mint</option>
+                      </select>
+                    </div>
                     {/* Vehicle No/Person */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">

@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
-import { query } from '../../lib/db';
+import { query } from '../../../lib/db';
 
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    // Await params in Next.js 16.16
+    const { id } = await params;
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'ID is required' },
+        { status: 400 }
+      );
+    }
     
     // First, check if the entry exists
     const checkSql = 'SELECT * FROM stock_entries WHERE id = ?';
@@ -36,7 +44,15 @@ export async function DELETE(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    // Await params in Next.js 16.16
+    const { id } = await params;
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'ID is required' },
+        { status: 400 }
+      );
+    }
     
     // Check if the entry exists
     const checkSql = 'SELECT * FROM stock_entries WHERE id = ?';
@@ -51,14 +67,15 @@ export async function PUT(request, { params }) {
     
     const formData = await request.formData();
     
+    // Get all form fields with proper null handling
     const entryDate = formData.get('entry_date');
     const productName = formData.get('product_name');
     const category = formData.get('category');
     const supplier = formData.get('supplier');
-    const quantity = parseFloat(formData.get('quantity'));
+    const quantity = formData.get('quantity') ? parseFloat(formData.get('quantity')) : null;
     const unit = formData.get('unit');
-    const purchasePrice = parseFloat(formData.get('purchase_price'));
-    const sellingPrice = parseFloat(formData.get('selling_price'));
+    const purchasePrice = formData.get('purchase_price') ? parseFloat(formData.get('purchase_price')) : null;
+    const sellingPrice = formData.get('selling_price') ? parseFloat(formData.get('selling_price')) : null;
     const expiryDate = formData.get('expiry_date');
     const batchNumber = formData.get('batch_number');
     const warehouse = formData.get('warehouse');
@@ -88,6 +105,14 @@ export async function PUT(request, { params }) {
       billFileSize = null;
     }
     
+    // Validate required fields
+    if (!entryDate || !productName || !category || !supplier || !quantity || !warehouse) {
+      return NextResponse.json(
+        { success: false, message: 'Required fields are missing' },
+        { status: 400 }
+      );
+    }
+    
     const sql = `
       UPDATE stock_entries 
       SET 
@@ -113,13 +138,31 @@ export async function PUT(request, { params }) {
       WHERE id = ?
     `;
     
+    // Prepare parameters with proper null handling
     const paramsArray = [
-      entryDate, productName, category, supplier, quantity, unit,
-      purchasePrice, sellingPrice, expiryDate || null, batchNumber || null,
-      warehouse, rackNumber || null, description || null, preparedBy, approvedBy,
-      billFileName, billFileBuffer, billFileSize,
+      entryDate,
+      productName,
+      category,
+      supplier,
+      quantity,
+      unit,
+      purchasePrice,
+      sellingPrice,
+      expiryDate || null,
+      batchNumber || null,
+      warehouse,
+      rackNumber || null,
+      description || null,
+      preparedBy || 'sapan singh',
+      approvedBy || 'sapan singh',
+      billFileName,
+      billFileBuffer,
+      billFileSize,
       id
     ];
+    
+    // Debug logging
+    console.log('Update params:', paramsArray.map((p, i) => `${i}: ${p !== null ? p : 'NULL'}`));
     
     await query(sql, paramsArray);
     
@@ -141,7 +184,15 @@ export async function PUT(request, { params }) {
 // GET single stock entry
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    // Await params in Next.js 16.16
+    const { id } = await params;
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'ID is required' },
+        { status: 400 }
+      );
+    }
     
     const sql = `
       SELECT 

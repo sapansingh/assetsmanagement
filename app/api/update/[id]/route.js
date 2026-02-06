@@ -1,6 +1,7 @@
 // app/api/update/[id]/route.js
 import { NextResponse } from 'next/server';
 import mysql from 'mysql2/promise';
+import { get } from 'react-hook-form';
 
 // Helper function to get database connection
 async function getDbConnection() {
@@ -226,6 +227,7 @@ export async function PUT(request, { params }) {
       approvedById,
       getValueOrNull(assetData.mail_date, null),
       getValueOrNull(assetData.replace_device_sn_imei, ''),
+      getValueOrNull(assetData.handover, ''),
       assetId  // WHERE clause parameter
     ];
     
@@ -239,7 +241,7 @@ export async function PUT(request, { params }) {
         device_status = ?, device_remark = ?,
         recovery_name = ?, recovery_status = ?,
         prepared_by = ?, approved_by = ?,
-        updated_at = NOW(),mail_date=?,replace_device_sn_imei=?
+        updated_at = NOW(),mail_date=?,replace_device_sn_imei=?,handover=?
       WHERE id = ?`,
       updateValues
     );

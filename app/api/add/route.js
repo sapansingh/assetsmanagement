@@ -177,6 +177,7 @@ function getValueOrNull(value, defaultValue = null) {
         approvedById,
          getValueOrNull(assetData.mail_date),
           getValueOrNull(assetData.replace_device_sn_imei),
+        getValueOrNull(assetData.handover, '')
       ];
       
       // Insert asset into database
@@ -187,8 +188,8 @@ function getValueOrNull(value, defaultValue = null) {
     issued_to, received_from, issue_date, received_date,
     device_status, device_remark,
     recovery_name, recovery_status,
-    prepared_by, approved_by, mail_date, replace_device_sn_imei
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    prepared_by, approved_by, mail_date, replace_device_sn_imei,handover
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
   insertValues
 );
 

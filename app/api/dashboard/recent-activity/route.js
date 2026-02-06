@@ -24,8 +24,8 @@ export async function GET() {
     const [recentAssets] = await connection.execute(`
       SELECT 
         a.id,
-        a.type_name,
-        a.brand_name,
+        a.type_id,
+        a.brand_id,
         a.status,
         a.device_status,
         a.updated_at as action_date,
