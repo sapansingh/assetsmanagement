@@ -2,12 +2,28 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useRef, useEffect, useState } from 'react';
-import { Metadata } from 'next';
+import { useRef, useEffect, useState, Suspense } from 'react';
 import { Printer, Download, X, FileText, CheckCircle, AlertCircle, Package, Smartphone, Car, User, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
+// Wrap the main component with Suspense
 const PrintableAssetForm = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 p-4 md:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading print form...</p>
+        </div>
+      </div>
+    }>
+      <PrintableAssetFormContent />
+    </Suspense>
+  );
+};
+
+// Create a separate component for the content that uses useSearchParams
+const PrintableAssetFormContent = () => {
   const searchParams = useSearchParams();
   const printRef = useRef(null);
   const [mounted, setMounted] = useState(false);
@@ -45,6 +61,7 @@ const PrintableAssetForm = () => {
   });
 
   function formatDate(date) {
+    if (!date) return '';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -236,7 +253,7 @@ const PrintableAssetForm = () => {
                       {assetData.status === 'Issued' ? 'Issue Date' : 'Received Date'}
                     </td>
                     <td className="py-2 px-4 text-sm font-semibold text-gray-900">
-                      {assetData.status === 'Issued' ? assetData.issue_date : assetData.received_date}
+                      {assetData.status === 'Issued' ? formatDate(assetData.issue_date) : formatDate(assetData.received_date)}
                     </td>
                   </tr>
                   
@@ -304,7 +321,6 @@ const PrintableAssetForm = () => {
                     <tr>
                       <td className="py-2 px-4 text-xs font-medium text-gray-500 border-r border-gray-200">Replace Device SN/IMEI</td>
                       <td colSpan="3" className="py-2 px-4 text-sm text-gray-700">
-                        <Calendar className="w-3 h-3 inline-block mr-1" />
                         {assetData.replace_device_sn_imei}
                       </td>
                     </tr>
@@ -357,7 +373,7 @@ const PrintableAssetForm = () => {
               <div className="text-center">
                 <div className="mb-3">
                   <div className="text-sm font-bold text-gray-900 mb-1">
-                   
+                    {assetData.status === 'Issued' ? assetData.issued_to : assetData.received_from}
                   </div>
                   <div className="text-xs text-gray-600 font-medium">
                     {assetData.status === 'Issued' ? 'Issued To' : 'Received By'}
@@ -385,6 +401,7 @@ const PrintableAssetForm = () => {
               {/* Signature 2 - Prepared By */}
               <div className="text-center">
                 <div className="mb-3">
+                  <div className="text-sm font-bold text-gray-900 mb-1">{assetData.prepared_by}</div>
                   <div className="text-xs text-gray-600 font-medium">Prepared By</div>
                   <div className="text-xs text-gray-500 mt-1">Asset Management Department</div>
                 </div>
@@ -407,6 +424,7 @@ const PrintableAssetForm = () => {
               {/* Signature 3 - Approved By */}
               <div className="text-center">
                 <div className="mb-3">
+                  <div className="text-sm font-bold text-gray-900 mb-1">{assetData.approved_by}</div>
                   <div className="text-xs text-gray-600 font-medium">Approved By</div>
                   <div className="text-xs text-gray-500 mt-1">Authorized Signatory</div>
                 </div>

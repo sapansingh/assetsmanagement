@@ -1,7 +1,7 @@
 // app/api/upload/route.js
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { query } from '@/lib/db';
+import { query } from '../../lib/db';
 
 export async function POST(request) {
   try {

@@ -1,5 +1,5 @@
 // app/api/assets/export/route.js
-import { query } from '../../lib/db';
+import { query } from '../../../lib/db';
 import ExcelJS from 'exceljs';
 
 export async function GET(request) {
