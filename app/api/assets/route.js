@@ -30,21 +30,22 @@ export async function GET(request) {
     }
     
     if (search) {
+       const searchTerm = `%${search}%`;
       whereClause += ` AND (
-        a.model_name LIKE ? OR 
-        a.vehicle_number LIKE ? OR 
-        a.serial_number LIKE ? OR 
-        a.imei_number LIKE ? OR 
-        a.issued_to LIKE ? OR 
-        a.received_from LIKE ? OR
-        at.type_name LIKE ? OR
-        ab.brand_name LIKE ?
+        a.model_name LIKE '${searchTerm}' OR 
+        a.vehicle_number LIKE '${searchTerm}' OR 
+        a.serial_number LIKE '${searchTerm}' OR 
+        a.imei_number LIKE '${searchTerm}' OR 
+        a.issued_to LIKE '${searchTerm}' OR 
+        a.received_from LIKE '${searchTerm}' OR
+        at.type_name LIKE '${searchTerm}' OR
+        ab.brand_name LIKE '${searchTerm}'
       )`;
-      const searchTerm = `%${search}%`;
+     
       // Add 8 search parameters
-      for (let i = 0; i < 8; i++) {
-        whereParams.push(searchTerm);
-      }
+     
+      
+   
     }
     
     console.log('WHERE clause:', whereClause);

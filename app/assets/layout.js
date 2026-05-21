@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect, createContext, useContext } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+const UserContext = createContext(null);
+export const useUser = () => useContext(UserContext);
+
 import { 
   LayoutDashboard,
   Package,
@@ -159,6 +162,7 @@ export default function AssetsLayout({ children }) {
   };
 
   return (
+     <UserContext.Provider value={userData}>
     <div className={`min-h-screen ${darkMode ? 'dark' : ''}`}>
       <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-900">
         {/* Sidebar */}
@@ -440,5 +444,6 @@ export default function AssetsLayout({ children }) {
         </div>
       </div>
     </div>
+     </UserContext.Provider>  
   );
 }

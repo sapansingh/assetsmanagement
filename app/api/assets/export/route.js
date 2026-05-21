@@ -1,20 +1,23 @@
 // app/api/assets/export/route.js
+
 import { query } from '../../../lib/db';
-import ExcelJS from 'exceljs';
+
+export const runtime = 'nodejs';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+
     const exportType = searchParams.get('type') || 'all';
-    
+
     let whereClause = '';
     const params = [];
-    
+
     if (exportType !== 'all') {
       whereClause = 'WHERE a.status = ?';
       params.push(exportType);
     }
-    
+
     const sql = `
       SELECT 
         a.id,
@@ -46,73 +49,94 @@ export async function GET(request) {
       ${whereClause}
       ORDER BY a.created_at DESC
     `;
-    
+
     const assets = await query(sql, params);
-    
-    // Create Excel workbook
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Assets');
-    
-    // Add headers
-    worksheet.columns = [
-      { header: 'ID', key: 'id', width: 10 },
-      { header: 'Type', key: 'type_name', width: 15 },
-      { header: 'Brand', key: 'brand_name', width: 15 },
-      { header: 'Model', key: 'model_name', width: 20 },
-      { header: 'Status', key: 'status', width: 12 },
-      { header: 'Vehicle No', key: 'vehicle_number', width: 15 },
-      { header: 'Serial No', key: 'serial_number', width: 20 },
-      { header: 'IMEI No', key: 'imei_number', width: 20 },
-      { header: 'IP Address', key: 'ip_address', width: 15 },
-      { header: 'GID', key: 'gid', width: 15 },
-      { header: 'Issued To', key: 'issued_to', width: 25 },
-      { header: 'Received From', key: 'received_from', width: 25 },
-      { header: 'Issue Date', key: 'issue_date', width: 12 },
-      { header: 'Received Date', key: 'received_date', width: 12 },
-      { header: 'Device Status', key: 'device_status', width: 15 },
-      { header: 'Device Remark', key: 'device_remark', width: 30 },
-      { header: 'Recovery Name', key: 'recovery_name', width: 25 },
-      { header: 'Recovery Status', key: 'recovery_status', width: 15 },
-      { header: 'Prepared By', key: 'prepared_by', width: 20 },
-      { header: 'Approved By', key: 'approved_by', width: 20 },
-      { header: 'Created At', key: 'created_at', width: 20 }
+
+    // CSV Headers
+    const headers = [
+      'ID',
+      'Type',
+      'Brand',
+      'Model',
+      'Status',
+      'Vehicle No',
+      'Serial No',
+      'IMEI No',
+      'IP Address',
+      'GID',
+      'Issued To',
+      'Received From',
+      'Issue Date',
+      'Received Date',
+      'Device Status',
+      'Device Remark',
+      'Recovery Name',
+      'Recovery Status',
+      'Prepared By',
+      'Approved By',
+      'Created At'
     ];
-    
-    // Add data rows
-    assets.forEach(asset => {
-      worksheet.addRow(asset);
+
+    // Convert rows to CSV
+    const rows = assets.map((asset) => [
+      asset.id,
+      asset.type_name,
+      asset.brand_name,
+      asset.model_name,
+      asset.status,
+      asset.vehicle_number,
+      asset.serial_number,
+      asset.imei_number,
+      asset.ip_address,
+      asset.gid,
+      asset.issued_to,
+      asset.received_from,
+      asset.issue_date,
+      asset.received_date,
+      asset.device_status,
+      asset.device_remark,
+      asset.recovery_name,
+      asset.recovery_status,
+      asset.prepared_by,
+      asset.approved_by,
+      asset.created_at
+    ]);
+
+    // Build CSV string
+    const csvContent = [
+      headers.join(','),
+
+      ...rows.map((row) =>
+        row
+          .map((field) =>
+            `"${String(field ?? '').replace(/"/g, '""')}"`
+          )
+          .join(',')
+      ),
+    ].join('\n');
+
+    return new Response(csvContent, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': `attachment; filename=assets_${
+          new Date().toISOString().split('T')[0]
+        }.csv`,
+      },
     });
-    
-    // Style header row
-    worksheet.getRow(1).eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: 'FFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: '4F46E5' } // Indigo
-      };
-    });
-    
-    // Auto filter
-    worksheet.autoFilter = 'A1:U1';
-    
-    // Generate buffer
-    const buffer = await workbook.xlsx.writeBuffer();
-    
-    // Return as downloadable file
-    const headers = new Headers();
-    headers.append('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    headers.append('Content-Disposition', `attachment; filename="assets_${new Date().toISOString().split('T')[0]}.xlsx"`);
-    
-    return new Response(buffer, {
-      headers,
-    });
-    
+
   } catch (error) {
-    console.error('Error exporting assets:', error);
+    console.error('CSV Export Error:', error);
+
     return Response.json(
-      { success: false, message: 'Failed to export assets' },
-      { status: 500 }
+      {
+        success: false,
+        message: 'Failed to export CSV',
+        error: error.message,
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

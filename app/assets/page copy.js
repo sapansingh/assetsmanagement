@@ -1,9 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../contexts/AuthContext';
-import { useUser } from "@/app/assets/layout";
+import { useUser } from "@/app/assets/layout"; 
+// Import toast from sonner
 import { toast } from 'sonner';
 import { 
   Plus, 
@@ -36,14 +37,14 @@ import {
 
 // API service functions
 const api = {
+  // Fetch assets with pagination and filters
   async getAssets(params = {}) {
     const queryParams = new URLSearchParams({
       page: params.page || 1,
       limit: params.limit || 100,
       search: params.search || '',
       status: params.status === 'all' ? '' : params.status || '',
-      device_status: params.device_status === 'all' ? '' : params.device_status || '',
-      brand: params.brand === 'all' ? '' : params.brand || ''
+      device_status: params.device_status || ''
     }).toString();
 
     console.log('Fetching assets with params:', queryParams);
@@ -56,6 +57,7 @@ const api = {
     return response.json();
   },
 
+  // Get single asset with images and documents
   async getAsset(id) {
     const response = await fetch(`/api/assets/${id}`);
     if (!response.ok) {
@@ -65,9 +67,11 @@ const api = {
     return response.json();
   },
 
+  // Create asset
   async createAsset(formData) {
     console.log('Sending FormData to create asset');
     
+    // Log form data for debugging
     for (let [key, value] of formData.entries()) {
       console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
     }
@@ -84,8 +88,14 @@ const api = {
     return response.json();
   },
 
+  // Update asset
   async updateAsset(id, formData) {
     console.log('Updating asset:', id);
+    console.log('FormData entries:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
+    }
+    
     const response = await fetch(`/api/update/${id}`, {
       method: 'PUT',
       body: formData
@@ -98,6 +108,7 @@ const api = {
     return response.json();
   },
 
+  // Delete asset
   async deleteAsset(id) {
     const response = await fetch(`/api/assets/${id}`, {
       method: 'DELETE'
@@ -109,6 +120,7 @@ const api = {
     return response.json();
   },
 
+  // Upload files
   async uploadFiles(assetId, type, files) {
     const formData = new FormData();
     formData.append('assetId', assetId);
@@ -132,9 +144,6 @@ const api = {
 };
 
 export default function AssetsPage() {
-  const userData = useUser();
-  const { user } = useAuth();
-  const currentUserName = userData?.fullName || userData?.username || user?.fullName || user?.username || 'sapan singh';
 
   // State management
   const [assets, setAssets] = useState([]);
@@ -142,21 +151,19 @@ export default function AssetsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDeviceStatus, setFilterDeviceStatus] = useState('all');
   const [filterBrand, setFilterBrand] = useState('all');
   const [editingAsset, setEditingAsset] = useState(null);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   
-  const searchTimeoutRef = useRef(null);
+  // Add filter visibility state
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   const [formData, setFormData] = useState({
     type_name: '',
     brand_name: '',
     model_name: '',
-    status: 'Issued',
+    status: 'In Stock',
     vehicleno: '',
     imei_no: '',
     ip_address: '',
@@ -171,8 +178,8 @@ export default function AssetsPage() {
     recovery_name: '',
     recovery_status: '',
     replace_device_sn_imei:'', 
-    prepared_by: currentUserName,
-    approved_by: currentUserName,
+    prepared_by: 'sapan singh',
+    approved_by: 'sapan singh',
     handover: ''
   });
   
@@ -185,6 +192,7 @@ export default function AssetsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState(null);
   
+  // Pagination state
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 100,
@@ -197,32 +205,7 @@ export default function AssetsPage() {
   const [brand, setBrand] = useState([]);
   const [loadingBrand, setLoadingBrand] = useState(true);
 
-  // Update formData when currentUserName changes
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      prepared_by: currentUserName,
-      approved_by: currentUserName
-    }));
-  }, [currentUserName]);
-
-  // Debounce search term
-  useEffect(() => {
-    setIsSearching(true);
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setIsSearching(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-  }, [debouncedSearchTerm, filterStatus, filterDeviceStatus, filterBrand]);
-
-  // Get unique values for filters from API data
+  // Get unique values for filters
   const uniqueBrands = useMemo(() => {
     const brands = assets.map(asset => asset.brand_name).filter(Boolean);
     return ['all', ...new Set(brands)];
@@ -292,28 +275,27 @@ export default function AssetsPage() {
     fetchBrand();
   }, []);
 
-  // Fetch assets with all filters
+  // Fetch assets on component mount and when filters/page changes
   const fetchAssets = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.getAssets({
         page: pagination.page,
         limit: pagination.limit,
-        search: debouncedSearchTerm,
-        status: filterStatus,
-        device_status: filterDeviceStatus,
-        brand: filterBrand
+        search: searchTerm,
+        status: filterStatus === 'all' ? '' : filterStatus
       });
       
       console.log('API Response:', response);
       
       if (response.success) {
         setAssets(response.data || []);
-        setPagination(prev => ({
-          ...prev,
-          total: response.pagination?.total || 0,
-          totalPages: response.pagination?.totalPages || 0
-        }));
+        setPagination(response.pagination || {
+          page: 1,
+          limit: 10,
+          total: response.data?.length || 0,
+          totalPages: 1
+        });
       } else {
         setAssets([]);
       }
@@ -324,12 +306,55 @@ export default function AssetsPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, debouncedSearchTerm, filterStatus, filterDeviceStatus, filterBrand]);
+  }, [pagination.page, pagination.limit]);
 
-  // Fetch assets when dependencies change
+  // Initial fetch
   useEffect(() => {
     fetchAssets();
   }, [fetchAssets]);
+
+  // Filtered Assets (client-side filtering)
+  const filteredAssets = useMemo(() => {
+    if (!assets || assets.length === 0) return [];
+
+    let filtered = [...assets];
+
+    // Search filter (across multiple fields)
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(asset => {
+        return (
+          (asset.type_name?.toLowerCase() || '').includes(searchLower) ||
+          (asset.brand_name?.toLowerCase() || '').includes(searchLower) ||
+          (asset.model_name?.toLowerCase() || '').includes(searchLower) ||
+          (asset.vehicle_number?.toLowerCase() || '').includes(searchLower) ||
+          (asset.imei_number?.toLowerCase() || '').includes(searchLower) ||
+          (asset.ip_address?.toLowerCase() || '').includes(searchLower) ||
+          (asset.issued_to?.toLowerCase() || '').includes(searchLower) ||
+          (asset.received_from?.toLowerCase() || '').includes(searchLower) ||
+          (asset.device_remark?.toLowerCase() || '').includes(searchLower) ||
+          (asset.gid?.toLowerCase() || '').includes(searchLower)
+        );
+      });
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(asset => asset.status === filterStatus);
+    }
+
+    // Device status filter
+    if (filterDeviceStatus !== 'all') {
+      filtered = filtered.filter(asset => asset.device_status === filterDeviceStatus);
+    }
+
+    // Brand filter
+    if (filterBrand !== 'all') {
+      filtered = filtered.filter(asset => asset.brand_name === filterBrand);
+    }
+
+    return filtered;
+  }, [assets, searchTerm, filterStatus, filterDeviceStatus, filterBrand]);
 
   // Handle search input with debounce
   const handleSearch = (value) => {
@@ -339,12 +364,10 @@ export default function AssetsPage() {
   // Reset all filters
   const resetFilters = () => {
     setSearchTerm('');
-    setDebouncedSearchTerm('');
     setFilterStatus('all');
     setFilterDeviceStatus('all');
     setFilterBrand('all');
     setShowAdvancedFilters(false);
-    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   // Modal handlers
@@ -375,7 +398,7 @@ export default function AssetsPage() {
             type_name: assetData.type_name || '',
             brand_name: assetData.brand_name || '',
             model_name: assetData.model_name || '',
-            status: assetData.status || 'Issued',
+            status: assetData.status || 'In Stock',
             vehicleno: assetData.vehicle_number || '',
             imei_no: assetData.imei_number || '',
             ip_address: assetData.ip_address || '',
@@ -387,14 +410,15 @@ export default function AssetsPage() {
             device_remark: assetData.device_remark || '',
             gid: assetData.gid || '',
             replace_device_sn_imei: assetData.replace_device_sn_imei || '',
-            mail_date: assetData.mail_date ? assetData.mail_date.split('T')[0] : '',
+            mail_date:assetData.mail_date ? assetData.mail_date.split('T')[0] : '',
             recovery_name: assetData.recovery_name || '',
             recovery_status: assetData.recovery_status || '',
-            prepared_by: assetData.prepared_by_name || currentUserName,
-            approved_by: assetData.approved_by_name || currentUserName,
+            prepared_by: assetData.prepared_by_name || 'Rjitis',
+            approved_by: assetData.approved_by_name || 'Rjitis',
             handover: assetData.handover || ''
           });
           
+          // Store existing images
           if (assetData.images && assetData.images.length > 0) {
             setExistingImages(assetData.images);
             const previews = assetData.images.map(img => ({
@@ -409,6 +433,7 @@ export default function AssetsPage() {
             setImagePreviews([]);
           }
           
+          // Load existing document
           if (assetData.documents && assetData.documents.length > 0) {
             setDocumentName(assetData.documents[0].document_name);
           } else {
@@ -429,7 +454,7 @@ export default function AssetsPage() {
         type_name: '',
         brand_name: '',
         model_name: '',
-        status: 'Issued',
+        status: 'In Stock',
         vehicleno: '',
         imei_no: '',
         ip_address: '',
@@ -440,12 +465,12 @@ export default function AssetsPage() {
         device_status: '',
         device_remark: '',
         gid: '',
-        mail_date: today,
+        mail_date:'',
         recovery_name: '',
         recovery_status: '',
-        replace_device_sn_imei: '',
-        prepared_by: currentUserName,
-        approved_by: currentUserName,
+        replace_device_sn_imei:'',
+        prepared_by: 'sapan singh',
+        approved_by: 'sapan singh',
         handover: ''
       });
       setExistingImages([]);
@@ -482,14 +507,15 @@ export default function AssetsPage() {
       gid: '',
       recovery_name: '',
       recovery_status: '',
-      mail_date: '',
-      replace_device_sn_imei: '',
-      prepared_by: currentUserName,
-      approved_by: currentUserName,
+      mail_date:'',
+      replace_device_sn_imei:'',
+      prepared_by: 'sapan singh',
+      approved_by: 'sapan singh',
       handover: ''
     });
   };
 
+  // Delete handlers
   const handleDeleteClick = (asset) => {
     setAssetToDelete(asset);
     setDeleteModalOpen(true);
@@ -501,9 +527,9 @@ export default function AssetsPage() {
         setLoading(true);
         const response = await api.deleteAsset(assetToDelete.id);
         if (response.success) {
+          // Remove from local state
           setAssets(assets.filter(a => a.id !== assetToDelete.id));
           toast.success('Asset deleted successfully');
-          fetchAssets(); // Refresh the list
         }
       } catch (error) {
         console.error('Error deleting asset:', error);
@@ -521,6 +547,7 @@ export default function AssetsPage() {
     setAssetToDelete(null);
   };
 
+  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -529,24 +556,41 @@ export default function AssetsPage() {
       
       const formDataToSend = new FormData();
       
+      // Add all form fields
       Object.keys(formData).forEach(key => {
+        // Skip images and document from formData since we handle them separately
         if (key !== 'images' && key !== 'document' && 
             formData[key] !== undefined && formData[key] !== null && formData[key] !== '') {
           formDataToSend.append(key, formData[key]);
         }
       });
       
+      // Add existing image IDs to preserve them
       existingImages.forEach(img => {
         formDataToSend.append('existingImages[]', img.id.toString());
       });
       
+      // Add new images
       images.forEach((file) => {
         formDataToSend.append('images', file);
       });
       
+      // Add document
       if (document) {
         formDataToSend.append('document', document);
       }
+      
+      console.log('📤 Sending FormData with entries:');
+      let fileCount = 0;
+      for (let [key, value] of formDataToSend.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - "${value.name}" (${value.type}, ${value.size} bytes)`);
+          fileCount++;
+        } else {
+          console.log(`${key}: "${value}"`);
+        }
+      }
+      console.log(`Total files: ${fileCount}`);
       
       let response;
       if (editingAsset) {
@@ -563,7 +607,7 @@ export default function AssetsPage() {
         fetchAssets();
       }
     } catch (error) {
-      console.error('Error saving asset:', error);
+      console.error('❌ Error saving asset:', error);
       toast.error(
         error.message || (editingAsset ? 'Failed to update asset' : 'Failed to create asset')
       );
@@ -572,6 +616,7 @@ export default function AssetsPage() {
     }
   };
 
+  // Form input handlers
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -587,27 +632,33 @@ export default function AssetsPage() {
         isNew: true
       }));
       
+      // Update both states
       setImagePreviews(prev => [...prev, ...newImages]);
-      setImages(prev => [...prev, ...files]);
+      setImages(prev => [...prev, ...files]); // Store actual File objects
     }
-    e.target.value = '';
+    e.target.value = ''; // Reset file input
   };
 
   const removeImage = (index) => {
     const imgToRemove = imagePreviews[index];
     
+    // Check if it's an existing image
     if (imgToRemove.isExisting) {
+      // Remove from existing images
       setExistingImages(prev => prev.filter(img => img.id !== imgToRemove.id));
     } else {
+      // Remove blob URL if it's a new image
       if (imgToRemove.preview && imgToRemove.preview.startsWith('blob:')) {
         URL.revokeObjectURL(imgToRemove.preview);
       }
+      // Remove from images array
       const imageIndex = index - existingImages.length;
       if (imageIndex >= 0) {
         setImages(prev => prev.filter((_, i) => i !== imageIndex));
       }
     }
     
+    // Remove from previews
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -615,9 +666,9 @@ export default function AssetsPage() {
     const file = e.target.files[0];
     if (file) {
       setDocumentName(file.name);
-      setDocument(file);
+      setDocument(file); // Store actual File object
     }
-    e.target.value = '';
+    e.target.value = ''; // Reset file input
   };
 
   const removeDocument = () => {
@@ -625,20 +676,32 @@ export default function AssetsPage() {
     setDocument(null);
   };
 
-  const exportToExcel = () => {
-    try {
-      const exportUrl = process.env.NEXT_PUBLIC_EXPORT_URL || 
-        'http://192.168.200.224/gvkprod/v2/app/charts/assetsexport.php';
-      
-      window.open(exportUrl, '_blank');
-      toast.success('Export started');
-    } catch (error) {
-      console.error('Export Error:', error);
-      toast.error('Export failed');
-    }
-  };
+const exportToExcel = () => {
+  try {
+    const exportUrl =
+      'http://192.168.200.224/gvkprod/v2/app/charts/assetsexport.php';
 
+    // Open in blank page/tab
+    window.open(exportUrl, '_blank');
+
+    toast.success('Export started');
+
+  } catch (error) {
+    console.error('Export Error:', error);
+
+    toast.error('Export failed');
+  }
+};
+
+
+const { user } = useAuth();
+  // Print button
   const renderPrintButton = (asset) => {
+
+      const userData = useUser();
+  const name =userData?.fullName || userData?.username || "User";
+
+  console.log('Authenticated user:', userData);
     const params = new URLSearchParams({
       id: asset.id.toString(),
       type_name: asset.type_name || '',
@@ -653,14 +716,16 @@ export default function AssetsPage() {
       device_status: asset.device_status || '',
       device_remark: asset.device_remark || '',
       gid: asset.gid || '',
-      mail_date: asset.mail_date || '',
+      mail_date:asset.mail_date || '',
       replace_device_sn_imei: asset.replace_device_sn_imei || '',
-      prepared_by: asset.prepared_by_name || currentUserName,
-      approved_by: asset.approved_by_name || currentUserName,
+      prepared_by: asset.prepared_by_name || 'sapan singh',
+      approved_by: asset.approved_by_name || 'sapan singh',
       received_from: asset.received_from || '',
       received_date: asset.received_date || '',
       handover: asset.handover || ''
     }).toString();
+
+
 
     return (
       <Link
@@ -674,6 +739,7 @@ export default function AssetsPage() {
     );
   };
 
+  // Render loading state
   if (loading && assets.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
@@ -686,6 +752,7 @@ export default function AssetsPage() {
   }
 
   return (
+    
     <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 min-h-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
@@ -733,13 +800,11 @@ export default function AssetsPage() {
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                   disabled={loading}
-                  className="w-full pl-10 pr-10 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                {isSearching && (
-                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 animate-spin text-indigo-500" />
-                )}
               </div>
               
+              {/* Toggle Advanced Filters */}
               <button
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 className="inline-flex items-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
@@ -750,6 +815,7 @@ export default function AssetsPage() {
                 </span>
               </button>
 
+              {/* Reset Filters */}
               {(searchTerm || filterStatus !== 'all' || filterDeviceStatus !== 'all' || filterBrand !== 'all') && (
                 <button
                   onClick={resetFilters}
@@ -761,9 +827,10 @@ export default function AssetsPage() {
               )}
             </div>
 
-            {/* Advanced Filters */}
+            {/* Advanced Filters (Collapsible) */}
             {showAdvancedFilters && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-300">
+                {/* Status Filter */}
                 <div className="group">
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     Status
@@ -777,9 +844,11 @@ export default function AssetsPage() {
                     <option value="all">All Status</option>
                     <option value="Issued">Issued</option>
                     <option value="Received">Received</option>
+                
                   </select>
                 </div>
 
+                {/* Device Status Filter */}
                 <div className="group">
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     Device Status
@@ -799,6 +868,7 @@ export default function AssetsPage() {
                   </select>
                 </div>
 
+                {/* Brand Filter */}
                 <div className="group">
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     Brand
@@ -864,7 +934,7 @@ export default function AssetsPage() {
 
         {/* Assets Table */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md overflow-hidden border border-slate-200 dark:border-slate-700">
-          {loading ? (
+          {loading && assets.length === 0 ? (
             <div className="py-12 text-center">
               <Loader2 className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4 animate-spin" />
               <p className="text-slate-500 dark:text-slate-400">Loading assets...</p>
@@ -886,8 +956,8 @@ export default function AssetsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {assets.length > 0 ? (
-                      assets.map((asset) => (
+                    {filteredAssets.length > 0 ? (
+                      filteredAssets.map((asset) => (
                         <tr key={asset.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-semibold text-sm">
@@ -940,7 +1010,7 @@ export default function AssetsPage() {
                                 </div>
                               )}
                             </div>
-                           </td>
+                          </td>
                           <td className="px-4 py-4">
                             <div className="space-y-1">
                               {asset.status === 'Issued' && asset.issued_to ? (
@@ -955,7 +1025,7 @@ export default function AssetsPage() {
                                 </div>
                               ) : null}
                             </div>
-                           </td>
+                          </td>
                           <td className="px-4 py-4">
                             <div className="space-y-1">
                               {asset.issue_date && (
@@ -975,7 +1045,7 @@ export default function AssetsPage() {
                                 </div>
                               )}
                             </div>
-                           </td>
+                          </td>
                           <td className="px-4 py-4">
                             <div className="space-y-1">
                               <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
@@ -991,11 +1061,12 @@ export default function AssetsPage() {
                                 <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px]">{asset.device_remark}</div>
                               )}
                             </div>
-                           </td>
+                          </td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
                               {renderPrintButton(asset)}
                               
+                              {/* View Button */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1031,7 +1102,7 @@ export default function AssetsPage() {
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
-                           </td>
+                          </td>
                         </tr>
                       ))
                     ) : (
@@ -1039,11 +1110,11 @@ export default function AssetsPage() {
                         <td colSpan="8" className="px-4 py-12 text-center">
                           <AlertCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                           <p className="text-slate-500 dark:text-slate-400">
-                            {searchTerm || filterStatus !== 'all' || filterDeviceStatus !== 'all' || filterBrand !== 'all'
-                              ? 'No assets match your current filters.'
-                              : 'No assets found. Add your first asset to get started.'}
+                            {assets.length === 0 
+                              ? 'No assets found. Add your first asset to get started.' 
+                              : 'No assets match your current filters.'}
                           </p>
-                          {(searchTerm || filterStatus !== 'all' || filterDeviceStatus !== 'all' || filterBrand !== 'all') && (
+                          {assets.length > 0 && (
                             <button
                               onClick={resetFilters}
                               className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -1057,109 +1128,118 @@ export default function AssetsPage() {
                     )}
                   </tbody>
                 </table>
-                
                 {/* Pagination Controls */}
-                {!loading && pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                    <div className="text-sm text-slate-600 dark:text-slate-400">
-                      Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                      {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                      {pagination.total} assets
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                        disabled={pagination.page === 1}
-                        className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      
-                      <div className="flex items-center gap-1">
-                        {(() => {
-                          const pages = [];
-                          const totalPages = pagination.totalPages;
-                          const currentPage = pagination.page;
-                          
-                          pages.push(1);
-                          
-                          let startPage = Math.max(2, currentPage - 1);
-                          let endPage = Math.min(totalPages - 1, currentPage + 1);
-                          
-                          if (startPage > 2) {
-                            pages.push('...');
-                          }
-                          
-                          for (let i = startPage; i <= endPage; i++) {
-                            pages.push(i);
-                          }
-                          
-                          if (endPage < totalPages - 1) {
-                            pages.push('...');
-                          }
-                          
-                          if (totalPages > 1) {
-                            pages.push(totalPages);
-                          }
-                          
-                          return pages.map((page, index) => (
-                            page === '...' ? (
-                              <span key={`ellipsis-${index}`} className="px-3 py-2 text-slate-500 dark:text-slate-400">
-                                ...
-                              </span>
-                            ) : (
-                              <button
-                                key={page}
-                                onClick={() => setPagination(prev => ({ ...prev, page }))}
-                                className={`min-w-[40px] h-10 px-3 rounded-lg font-medium transition-all ${
-                                  pagination.page === page
-                                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                                    : 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                                }`}
-                              >
-                                {page}
-                              </button>
-                            )
-                          ));
-                        })()}
-                      </div>
-                      
-                      <button
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                        disabled={pagination.page === pagination.totalPages}
-                        className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      
-                      <select
-                        value={pagination.limit}
-                        onChange={(e) => setPagination(prev => ({ 
-                          ...prev, 
-                          limit: Number(e.target.value),
-                          page: 1
-                        }))}
-                        className="ml-4 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                      >
-                        <option value={10}>10 per page</option>
-                        <option value={25}>25 per page</option>
-                        <option value={50}>50 per page</option>
-                        <option value={100}>100 per page</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
+{!loading && pagination.totalPages > 1 && (
+  <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+    <div className="text-sm text-slate-600 dark:text-slate-400">
+      Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+      {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+      {pagination.total} assets
+    </div>
+    
+    <div className="flex items-center gap-2">
+      {/* Previous Page Button */}
+      <button
+        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+        disabled={pagination.page === 1}
+        className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+      
+      {/* Page Numbers */}
+      <div className="flex items-center gap-1">
+        {(() => {
+          const pages = [];
+          const totalPages = pagination.totalPages;
+          const currentPage = pagination.page;
+          
+          // Always show first page
+          pages.push(1);
+          
+          // Calculate range around current page
+          let startPage = Math.max(2, currentPage - 1);
+          let endPage = Math.min(totalPages - 1, currentPage + 1);
+          
+          // Add ellipsis after first page if needed
+          if (startPage > 2) {
+            pages.push('...');
+          }
+          
+          // Add pages in range
+          for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+          }
+          
+          // Add ellipsis before last page if needed
+          if (endPage < totalPages - 1) {
+            pages.push('...');
+          }
+          
+          // Always show last page if totalPages > 1
+          if (totalPages > 1) {
+            pages.push(totalPages);
+          }
+          
+          return pages.map((page, index) => (
+            page === '...' ? (
+              <span key={`ellipsis-${index}`} className="px-3 py-2 text-slate-500 dark:text-slate-400">
+                ...
+              </span>
+            ) : (
+              <button
+                key={page}
+                onClick={() => setPagination(prev => ({ ...prev, page }))}
+                className={`min-w-[40px] h-10 px-3 rounded-lg font-medium transition-all ${
+                  pagination.page === page
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                    : 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                {page}
+              </button>
+            )
+          ));
+        })()}
+      </div>
+      
+      {/* Next Page Button */}
+      <button
+        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+        disabled={pagination.page === pagination.totalPages}
+        className="p-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+      
+      {/* Page Size Selector */}
+      <select
+        value={pagination.limit}
+        onChange={(e) => setPagination(prev => ({ 
+          ...prev, 
+          limit: Number(e.target.value),
+          page: 1 // Reset to first page when changing page size
+        }))}
+        className="ml-4 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+      >
+        <option value={10}>10 per page</option>
+        <option value={25}>25 per page</option>
+        <option value={50}>50 per page</option>
+        <option value={100}>100 per page</option>
+      </select>
+    </div>
+  </div>
+)}
               </div>
               
               {/* Results Count */}
-              {assets.length > 0 && (
+              {filteredAssets.length > 0 && (
                 <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-600 dark:text-slate-400">
-                    Showing {assets.length} results
+                    Showing {filteredAssets.length} of {assets.length} assets
                     {(searchTerm || filterStatus !== 'all' || filterDeviceStatus !== 'all' || filterBrand !== 'all') && (
                       <span className="ml-2 text-indigo-600 dark:text-indigo-400">
-                        (filtered from {pagination.total} total)
+                        (filtered from {assets.length} total)
                       </span>
                     )}
                   </div>
@@ -1174,6 +1254,7 @@ export default function AssetsPage() {
       {viewingAsset && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden transform transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4">
+            {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex items-center justify-between relative overflow-hidden">
               <div className="flex items-center gap-3 relative z-10">
                 <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -1192,6 +1273,7 @@ export default function AssetsPage() {
               </button>
             </div>
 
+            {/* Modal Body */}
             <div className="p-6 overflow-y-auto max-h-[calc(85vh-100px)]">
               {loading ? (
                 <div className="py-8 text-center">
@@ -1200,6 +1282,7 @@ export default function AssetsPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {/* Asset Header */}
                   <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
                     <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                       <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -1210,6 +1293,7 @@ export default function AssetsPage() {
                     </div>
                   </div>
 
+                  {/* Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Status</p>
@@ -1236,6 +1320,7 @@ export default function AssetsPage() {
                     </div>
                   </div>
 
+                  {/* Assignment Details */}
                   <div className="space-y-4">
                     <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                       <User className="w-4 h-4" />
@@ -1262,6 +1347,7 @@ export default function AssetsPage() {
                     )}
                   </div>
 
+                  {/* Device Details */}
                   <div className="space-y-4">
                     <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                       <Smartphone className="w-4 h-4" />
@@ -1295,6 +1381,7 @@ export default function AssetsPage() {
                     </div>
                   </div>
 
+                  {/* Remarks */}
                   {viewingAsset.device_remark && (
                     <div className="space-y-2">
                       <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -1307,6 +1394,7 @@ export default function AssetsPage() {
                     </div>
                   )}
 
+                  {/* Images Preview */}
                   {viewingAsset?.images && viewingAsset.images.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -1331,6 +1419,7 @@ export default function AssetsPage() {
                     </div>
                   )}
 
+                  {/* Documents Preview */}
                   {viewingAsset?.documents && viewingAsset.documents.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -1367,15 +1456,16 @@ export default function AssetsPage() {
                     </div>
                   )}
 
+                  {/* Prepared By */}
                   <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">Prepared By</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">{viewingAsset.prepared_by_name || currentUserName}</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">{viewingAsset.prepared_by_name}</p>
                       </div>
                       <div>
                         <p className="text-slate-500 dark:text-slate-400">Approved By</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">{viewingAsset.approved_by_name || currentUserName}</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">{viewingAsset.approved_by_name}</p>
                       </div>
                     </div>
                   </div>
@@ -1383,6 +1473,7 @@ export default function AssetsPage() {
               )}
             </div>
 
+            {/* Modal Footer */}
             <div className="flex justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
               <button
                 onClick={() => setViewingAsset(null)}
@@ -1409,6 +1500,7 @@ export default function AssetsPage() {
       {deleteModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full transform transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4">
+            {/* Modal Header */}
             <div className="bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 px-6 py-5 flex items-center justify-between relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-rose-600/20 to-pink-600/20 animate-pulse"></div>
               <h2 className="text-xl font-bold text-white relative z-10 flex items-center gap-2">
@@ -1425,6 +1517,7 @@ export default function AssetsPage() {
               </button>
             </div>
 
+            {/* Modal Body */}
             <div className="p-6">
               <div className="flex items-start gap-4 mb-6">
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
@@ -1478,6 +1571,7 @@ export default function AssetsPage() {
                 </div>
               </div>
 
+              {/* Modal Footer */}
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
@@ -1512,6 +1606,7 @@ export default function AssetsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden transform transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4">
+            {/* Modal Header */}
             <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 py-5 flex items-center justify-between relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-pink-600/20 animate-pulse"></div>
               <h2 className="text-xl font-bold text-white relative z-10 flex items-center gap-2">
@@ -1528,8 +1623,10 @@ export default function AssetsPage() {
               </button>
             </div>
 
+            {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
               <div className="space-y-8">
+                {/* Basic Information Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
                     <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1537,6 +1634,7 @@ export default function AssetsPage() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Asset Type */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 transition-colors group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400">
                         Asset Type <span className="text-red-500">*</span>
@@ -1558,6 +1656,7 @@ export default function AssetsPage() {
                       </select>
                     </div>
 
+                    {/* Brand */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 transition-colors group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400">
                         Brand <span className="text-red-500">*</span>
@@ -1579,6 +1678,7 @@ export default function AssetsPage() {
                       </select>
                     </div>
 
+                    {/* Model */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 transition-colors group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400">
                         Model <span className="text-red-500">*</span>
@@ -1595,6 +1695,7 @@ export default function AssetsPage() {
                       />
                     </div>
 
+                    {/* Status */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 transition-colors group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400">
                         Status <span className="text-red-500">*</span>
@@ -1609,11 +1710,13 @@ export default function AssetsPage() {
                       >
                         <option value="Issued">Issued</option>
                         <option value="Received">Received</option>
+                        {/* <option value="In Stock">In Stock</option> */}
                       </select>
                     </div>
                   </div>
                 </div>
 
+                {/* IP Address */}
                 <div className="group">
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     IP Address
@@ -1631,6 +1734,7 @@ export default function AssetsPage() {
                   />
                 </div>
 
+                {/* Assignment Details Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
                     <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1638,32 +1742,34 @@ export default function AssetsPage() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Person Field (Issued To / Received From) */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                        {formData.status === 'Issued' ? 'Issued To' : 'Received From'} <span className="text-red-500">*</span>
+                        {formData.status === 'Issued' ? 'Issued To' : formData.status === 'Received' ? 'Received From' : 'Issued To'} {formData.status !== 'In Stock' && <span className="text-red-500">*</span>}
                       </label>
                       <input
                         type="text"
-                        name={formData.status === 'Issued' ? 'issued_to' : 'received_from'}
-                        value={formData.status === 'Issued' ? formData.issued_to : formData.received_from}
+                        name={formData.status === 'Issued' ? 'issued_to' : formData.status === 'Received' ? 'received_from' : 'issued_to'}
+                        value={formData.status === 'Issued' ? formData.issued_to : formData.status === 'Received' ? formData.received_from : ''}
                         onChange={handleInputChange}
-                        required
+                        required={formData.status !== 'In Stock'}
                         disabled={submitting}
                         className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200 bg-white dark:bg-slate-700 text-slate-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                        placeholder={formData.status === 'Issued' ? "Enter person's name" : "Enter person's name"}
+                        placeholder={formData.status === 'Issued' ? "Enter person's name" : formData.status === 'Received' ? "Enter person's name" : "Enter storage location"}
                       />
                     </div>
 
+                    {/* Date Field (Issue Date / Received Date) */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                        {formData.status === 'Issued' ? 'Issue Date' : 'Received Date'} <span className="text-red-500">*</span>
+                        {formData.status === 'Issued' ? 'Issue Date' : formData.status === 'Received' ? 'Received Date' : 'Issue Date'} {formData.status !== 'In Stock' && <span className="text-red-500">*</span>}
                       </label>
                       <input
                         type="date"
                         name={formData.status === 'Issued' ? 'issue_date' : 'received_date'}
                         value={formData.status === 'Issued' ? formData.issue_date : formData.received_date}
                         onChange={handleInputChange}
-                        required
+                        required={formData.status !== 'In Stock'}
                         disabled={submitting}
                         className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200 bg-white dark:bg-slate-700 text-slate-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
@@ -1671,6 +1777,7 @@ export default function AssetsPage() {
                   </div>
                 </div>
 
+                {/* Device Details Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
                     <Smartphone className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1678,6 +1785,7 @@ export default function AssetsPage() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Device Status */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         Handover
@@ -1698,7 +1806,7 @@ export default function AssetsPage() {
                         <option value="Mint">Mint</option>
                       </select>
                     </div>
-                    
+                    {/* Vehicle No/Person */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         Vehicle Number
@@ -1714,6 +1822,7 @@ export default function AssetsPage() {
                       />
                     </div>
 
+                    {/* IMEI/SERIAL No */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         Serial / IMEI Number
@@ -1729,6 +1838,7 @@ export default function AssetsPage() {
                       />
                     </div>
 
+                    {/* GID */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         GID
@@ -1744,6 +1854,7 @@ export default function AssetsPage() {
                       />
                     </div>
 
+                    {/* Device Status */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         Device Status
@@ -1765,6 +1876,7 @@ export default function AssetsPage() {
                       </select>
                     </div>
 
+                    {/* Device Remark */}
                     <div className="group col-span-2">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         Device Remark
@@ -1780,6 +1892,8 @@ export default function AssetsPage() {
                       />
                     </div>
 
+
+                    {/* Date Field (Issue Date / Received Date) */}
                     <div className="group">
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         Mail Date
@@ -1789,29 +1903,34 @@ export default function AssetsPage() {
                         name="mail_date"
                         value={formData.mail_date}
                         onChange={handleInputChange}
+                        required={formData.status !== 'In Stock'}
                         disabled={submitting}
                         className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200 bg-white dark:bg-slate-700 text-slate-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
-                    {(formData.status === 'Issued') && (
-                      <div className="group">
-                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                          Replace Device SN/IMEI No
-                        </label>
-                        <input
-                          type="text"
-                          name="replace_device_sn_imei"
-                          value={formData.replace_device_sn_imei}
-                          onChange={handleInputChange}
-                          disabled={submitting}
-                          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200 bg-white dark:bg-slate-700 text-slate-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                      </div>
-                    )}
+                        {/* Date Field (Issue Date / Received Date) */}
+
+                        {(formData.status === 'Issued' || formData.status==='In Stock') && (  <div className="group">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                        Replace Device Sn/IMEI No
+                      </label>
+                      <input
+                        type="text"
+                        name="replace_device_sn_imei"
+                        value={formData.replace_device_sn_imei}
+                        onChange={handleInputChange}
+                        disabled={submitting}
+                        className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-200 bg-white dark:bg-slate-700 text-slate-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>)}
+                  
+
+
                   </div>
                 </div>
 
+                {/* File Uploads Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
                     <Upload className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1819,12 +1938,13 @@ export default function AssetsPage() {
                     <span className="text-xs text-slate-500 dark:text-slate-400">(Optional)</span>
                   </div>
                   
+                  {/* Document Upload */}
                   <div className="group">
                     <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4" />
                         Document Upload
-                        <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(PDF, DOC, DOCX, MSG)</span>
+                        <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(PDF, DOC, DOCX,MSG)</span>
                       </div>
                     </label>
                     <div className="relative">
@@ -1876,6 +1996,7 @@ export default function AssetsPage() {
                     )}
                   </div>
 
+                  {/* Images Upload */}
                   <div className="group">
                     <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       <div className="flex items-center gap-2">
@@ -1917,6 +2038,7 @@ export default function AssetsPage() {
                       </label>
                     </div>
                     
+                    {/* Image Previews */}
                     {imagePreviews.length > 0 && (
                       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                         {imagePreviews.map((img, index) => (
@@ -1952,6 +2074,7 @@ export default function AssetsPage() {
                 </div>
               </div>
 
+              {/* Modal Footer */}
               <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
